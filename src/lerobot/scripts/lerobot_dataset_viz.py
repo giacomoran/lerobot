@@ -80,9 +80,21 @@ from lerobot.utils.constants import ACTION, DONE, OBS_STATE, REWARD
 
 class EpisodeSampler(torch.utils.data.Sampler):
     def __init__(self, dataset: LeRobotDataset, episode_index: int):
+        # Get absolute indices from episode metadata
         from_idx = dataset.meta.episodes["dataset_from_index"][episode_index]
         to_idx = dataset.meta.episodes["dataset_to_index"][episode_index]
-        self.frame_ids = range(from_idx, to_idx)
+
+        # If dataset has been filtered, map absolute indices to relative indices
+        if dataset._absolute_to_relative_idx is not None:
+            # Map absolute indices to relative indices in the filtered dataset
+            self.frame_ids = [
+                dataset._absolute_to_relative_idx[idx]
+                for idx in range(from_idx, to_idx)
+                if idx in dataset._absolute_to_relative_idx
+            ]
+        else:
+            # Dataset contains all episodes, use absolute indices directly
+            self.frame_ids = range(from_idx, to_idx)
 
     def __iter__(self) -> Iterator:
         return iter(self.frame_ids)
